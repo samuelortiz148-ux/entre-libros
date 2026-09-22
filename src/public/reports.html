@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entre Libros - Módulo de Reportes</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="logo">Entre Libros</a>
+    <nav>
+      <a href="/index.html">Inicio</a>
+      <a href="/reports.html">Reportes</a>
+    </nav>
+  </header>
+
+  <main style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
+    <h2>Dashboard de Reportes y Estadísticas</h2>
+    
+    <div class="card-grid">
+      <div class="card">
+        <h3>Libros Registrados</h3>
+        <p class="stat-number" id="total-books">0</p>
+      </div>
+      <div class="card">
+        <h3>Usuarios Activos</h3>
+        <p class="stat-number" id="total-users">0</p>
+      </div>
+      <div class="card">
+        <h3>Préstamos Activos</h3>
+        <p class="stat-number" id="active-loans">0</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/reports.js"></script>
+</body>
+</html>

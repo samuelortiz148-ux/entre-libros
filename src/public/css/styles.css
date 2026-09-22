@@ -1,0 +1,115 @@
+/* Variables de Identidad Visual - Entre Libros */
+:root {
+  --azul-profundo: #1B3B6F; /* Color principal */
+  --azul-claro: #6FA8DC;    /* Elementos secundarios */
+  --verde-suave: #8ED1B0;   /* Acciones positivas / disponible */
+  --blanco: #FFFFFF;        /* Fondos generales */
+  --beige-papel: #EFE3CB;   /* Tarjetas / detalles */
+  --texto-oscuro: #2C3E50;
+  --fuente-titulo: 'Georgia', 'Times New Roman', serif;
+  --fuente-cuerpo: 'Arial', 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--fuente-cuerpo);
+  background-color: var(--blanco);
+  color: var(--texto-oscuro);
+  line-height: 1.6;
+}
+
+/* Encabezados */
+h1, h2, h3 {
+  font-family: var(--fuente-titulo);
+  color: var(--azul-profundo);
+}
+
+/* Barra de Navegación */
+.navbar {
+  background-color: var(--azul-profundo);
+  color: var(--blanco);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar .logo {
+  font-family: var(--fuente-titulo);
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--blanco);
+  text-decoration: none;
+}
+
+.navbar nav a {
+  color: var(--blanco);
+  text-decoration: none;
+  margin-left: 1.5rem;
+  font-size: 0.95rem;
+  transition: opacity 0.2s;
+}
+
+.navbar nav a:hover {
+  opacity: 0.8;
+}
+
+/* Estructura de Tarjetas para Reportes y Catálogo */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.card {
+  background-color: var(--beige-papel);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.card .stat-number {
+  font-size: 2.2rem;
+  font-weight: bold;
+  color: var(--azul-profundo);
+}
+
+/* Botones y Badges Reutilizables */
+.btn-primary {
+  background-color: var(--azul-profundo);
+  color: var(--blanco);
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-success {
+  background-color: var(--verde-suave);
+  color: var(--texto-oscuro);
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.badge-disponible {
+  background-color: var(--verde-suave);
+  color: var(--texto-oscuro);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
