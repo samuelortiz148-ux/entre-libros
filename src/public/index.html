@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+  <div id="navbar-container"></div>
+
+<script>
+    // Carga dinámica del menú de navegación
+    fetch('/nav.html')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('navbar-container').innerHTML = data;
+        });
+</script>
+
   <header class="navbar">
     <a href="/" class="logo">Entre Libros</a>
     <nav>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entre Libros - Préstamos y Devoluciones</title>
+    <style>
+        :root {
+            --azul-profundo: #1B3B6F;
+            --azul-claro: #6FA8DC;
+            --verde-suave: #8ED1B0;
+            --beige: #EFE3CB;
+            --blanco: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--beige);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1, h2 { color: var(--azul-profundo); }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--blanco);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .form-group { margin-bottom: 15px; }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--azul-profundo);
+            color: var(--blanco);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: var(--azul-claro); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--azul-profundo);
+            color: var(--blanco);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.85em;
+        }
+
+        .badge-prestado { background-color: #f39c12; }
+        .badge-devuelto { background-color: var(--verde-suave); color: #333; }
+    </style>
+</head>
+<body>
+    
+<div id="navbar-container"></div>
+
+<script>
+    // Carga dinámica del menú de navegación
+    fetch('/nav.html')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('navbar-container').innerHTML = data;
+        })
+        .catch(err => console.error('Error cargando la barra de navegación:', err));
+</script>
+
+<div class="container">
+    <h1>📚 Módulo de Préstamos y Devoluciones</h1>
+
+    <!-- FORMULARIO -->
+    <div class="card">
+        <h2>Solicitar Préstamo</h2>
+        <form id="form-prestamo">
+            <div class="form-group">
+                <label for="usuario_id">ID del Usuario:</label>
+                <input type="number" id="usuario_id" required placeholder="Ej. 1" min="1">
+            </div>
+            <div class="form-group">
+                <label for="libro_id">ID del Libro:</label>
+                <input type="number" id="libro_id" required placeholder="Ej. 1" min="1">
+            </div>
+            <button type="submit">Registrar Préstamo</button>
+        </form>
+        <p id="msg-prestamo" style="font-weight: bold; margin-top: 10px;"></p>
+    </div>
+
+    <!-- TABLA DE PRÉSTAMOS -->
+    <div class="card">
+        <h2>Historial de Préstamos</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuario</th>
+                    <th>Libro</th>
+                    <th>Fecha Préstamo</th>
+                    <th>Fecha Límite</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-prestamos">
+                <tr><td colspan="7">Cargando préstamos...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/loans';
+
+    document.addEventListener('DOMContentLoaded', cargarPrestamos);
+
+    async function cargarPrestamos() {
+        const tbody = document.getElementById('tabla-prestamos');
+        try {
+            const res = await fetch(API_URL);
+            const prestamos = await res.json();
+
+            tbody.innerHTML = '';
+
+            // Validación de seguridad por si el servidor devuelve un objeto de error en vez de un Array
+            if (!Array.isArray(prestamos) || prestamos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7">No hay préstamos registrados.</td></tr>';
+                return;
+            }
+
+            prestamos.forEach(p => {
+                const tr = document.createElement('tr');
+                const usuarioNombre = p.usuarios ? p.usuarios.nombre : `Usuario #${p.usuario_id}`;
+                const libroTitulo = p.libros ? p.libros.titulo : `Libro #${p.libro_id}`;
+                const fPrestamo = p.fecha_prestamo ? new Date(p.fecha_prestamo).toLocaleDateString() : '-';
+                const fLimite = p.fecha_limite ? new Date(p.fecha_limite).toLocaleDateString() : '-';
+                const estado = p.estado || 'PRESTADO';
+
+                let accionBtn = estado === 'PRESTADO' 
+                    ? `<button onclick="devolverLibro(${p.id})">Devolver</button>` 
+                    : '<span>-</span>';
+
+                tr.innerHTML = `
+                    <td>${p.id}</td>
+                    <td>${usuarioNombre}</td>
+                    <td>${libroTitulo}</td>
+                    <td>${fPrestamo}</td>
+                    <td>${fLimite}</td>
+                    <td><span class="badge badge-${estado.toLowerCase()}">${estado}</span></td>
+                    <td>${accionBtn}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error('Error al cargar historial:', error);
+            tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error al cargar el historial de préstamos.</td></tr>';
+        }
+    }
+
+    document.getElementById('form-prestamo').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msg = document.getElementById('msg-prestamo');
+        msg.style.color = '#333';
+        msg.textContent = 'Procesando...';
+
+        const usuario_id = parseInt(document.getElementById('usuario_id').value);
+        const libro_id = parseInt(document.getElementById('libro_id').value);
+
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario_id, libro_id })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                msg.style.color = 'green';
+                msg.textContent = data.message || 'Préstamo registrado exitosamente.';
+                document.getElementById('form-prestamo').reset();
+                cargarPrestamos();
+            } else {
+                msg.style.color = 'red';
+                // Mostrar el mensaje directo del backend (message o error)
+                msg.textContent = data.message || data.error || 'No se pudo procesar el préstamo.';
+            }
+        } catch (error) {
+            console.error('Error en formulario:', error);
+            msg.style.color = 'red';
+            msg.textContent = 'Error de conexión con el servidor.';
+        }
+    });
+
+    async function devolverLibro(prestamo_id) {
+        if (!confirm('¿Confirmar la devolución de este libro?')) return;
+
+        try {
+            const res = await fetch(`${API_URL}/return`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prestamo_id })
+            });
+
+            const data = await res.json();
+            alert(data.message || data.error || 'Devolución procesada.');
+            cargarPrestamos();
+        } catch (error) {
+            console.error('Error al devolver libro:', error);
+            alert('Error al registrar la devolución');
+        }
+    }
+</script>
+
+</body>
+</html>
