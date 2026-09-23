@@ -8,7 +8,9 @@
         :root {
             --azul-profundo: #1B3B6F;
             --azul-claro: #6FA8DC;
-            --verde-suave: #8ED1B0;
+            --verde-suave: #2ecc71;
+            --rojo-alerta: #e74c3c;
+            --naranja: #f39c12;
             --beige: #EFE3CB;
             --blanco: #FFFFFF;
         }
@@ -64,6 +66,19 @@
 
         button:hover { background-color: var(--azul-claro); }
 
+        .btn-devolver {
+            background-color: var(--verde-suave);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-devolver:hover {
+            background-color: #27ae60;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -86,10 +101,13 @@
             border-radius: 4px;
             color: white;
             font-size: 0.85em;
+            font-weight: bold;
+            display: inline-block;
         }
 
-        .badge-prestado { background-color: #f39c12; }
-        .badge-devuelto { background-color: var(--verde-suave); color: #333; }
+        .badge-prestado { background-color: var(--naranja); }
+        .badge-devuelto { background-color: var(--verde-suave); }
+        .badge-vencido { background-color: var(--rojo-alerta); }
     </style>
 </head>
 <body>
@@ -161,31 +179,45 @@
 
             tbody.innerHTML = '';
 
-            // Validación de seguridad por si el servidor devuelve un objeto de error en vez de un Array
             if (!Array.isArray(prestamos) || prestamos.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7">No hay préstamos registrados.</td></tr>';
                 return;
             }
+
+            const hoy = new Date();
 
             prestamos.forEach(p => {
                 const tr = document.createElement('tr');
                 const usuarioNombre = p.usuarios ? p.usuarios.nombre : `Usuario #${p.usuario_id}`;
                 const libroTitulo = p.libros ? p.libros.titulo : `Libro #${p.libro_id}`;
                 const fPrestamo = p.fecha_prestamo ? new Date(p.fecha_prestamo).toLocaleDateString() : '-';
-                const fLimite = p.fecha_limite ? new Date(p.fecha_limite).toLocaleDateString() : '-';
-                const estado = p.estado || 'PRESTADO';
+                
+                const rawFechaLimite = p.fecha_devolucion_prevista || p.fecha_limite;
+                const fLimiteObj = rawFechaLimite ? new Date(rawFechaLimite) : null;
+                const fLimiteFormatted = fLimiteObj ? fLimiteObj.toLocaleDateString() : '-';
 
-                let accionBtn = estado === 'PRESTADO' 
-                    ? `<button onclick="devolverLibro(${p.id})">Devolver</button>` 
+                let estado = p.estado || 'PRESTADO';
+                let badgeClass = 'badge-prestado';
+
+                // Lógica visual para préstamos vencidos
+                if (estado === 'DEVUELTO') {
+                    badgeClass = 'badge-devuelto';
+                } else if (fLimiteObj && fLimiteObj < hoy) {
+                    estado = 'VENCIDO';
+                    badgeClass = 'badge-vencido';
+                }
+
+                let accionBtn = p.estado === 'PRESTADO' 
+                    ? `<button class="btn-devolver" onclick="devolverLibro(${p.id})">Devolver</button>` 
                     : '<span>-</span>';
 
                 tr.innerHTML = `
-                    <td>${p.id}</td>
+                    <td><strong>#${p.id}</strong></td>
                     <td>${usuarioNombre}</td>
                     <td>${libroTitulo}</td>
                     <td>${fPrestamo}</td>
-                    <td>${fLimite}</td>
-                    <td><span class="badge badge-${estado.toLowerCase()}">${estado}</span></td>
+                    <td>${fLimiteFormatted}</td>
+                    <td><span class="badge ${badgeClass}">${estado}</span></td>
                     <td>${accionBtn}</td>
                 `;
                 tbody.appendChild(tr);
@@ -196,6 +228,7 @@
         }
     }
 
+    // Formulario de Préstamo
     document.getElementById('form-prestamo').addEventListener('submit', async (e) => {
         e.preventDefault();
         const msg = document.getElementById('msg-prestamo');
@@ -221,7 +254,6 @@
                 cargarPrestamos();
             } else {
                 msg.style.color = 'red';
-                // Mostrar el mensaje directo del backend (message o error)
                 msg.textContent = data.message || data.error || 'No se pudo procesar el préstamo.';
             }
         } catch (error) {
@@ -231,8 +263,9 @@
         }
     });
 
+    // Acción de Devolución
     async function devolverLibro(prestamo_id) {
-        if (!confirm('¿Confirmar la devolución de este libro?')) return;
+        if (!confirm(`¿Confirmar la devolución del préstamo #${prestamo_id}?`)) return;
 
         try {
             const res = await fetch(`${API_URL}/return`, {
@@ -246,7 +279,7 @@
             cargarPrestamos();
         } catch (error) {
             console.error('Error al devolver libro:', error);
-            alert('Error al registrar la devolución');
+            alert('Error de conexión al registrar la devolución.');
         }
     }
 </script>

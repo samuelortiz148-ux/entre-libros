@@ -6,5 +6,6 @@ const loansController = require('../controllers/loans.controller');
 router.get('/', loansController.getLoans);
 router.post('/', loansController.createLoan);
 router.post('/return', loansController.returnBook);
+router.post('/returns', loansController.returnBook);
 
 module.exports = router;
