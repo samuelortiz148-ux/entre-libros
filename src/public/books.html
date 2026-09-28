@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Libros - Entre Libros</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #EFE3CB; color: #1B3B6F; margin: 20px; }
+    h1, h2 { color: #1B3B6F; }
+    .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    input, button { padding: 8px 12px; margin: 5px 0; border-radius: 4px; border: 1px solid #ccc; }
+    button { background-color: #1B3B6F; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #6FA8DC; }
+    .btn-danger { background-color: #d9534f; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #6FA8DC; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+  </style>
+</head>
+<body>
+
+  <h1>📚 Gestión de Catálogo e Inventario de Libros</h1>
+
+  <!-- BUSCADOR -->
+  <div class="container">
+    <h2>🔍 Buscar y Filtrar Libros</h2>
+    <input type="text" id="searchTitulo" placeholder="Título...">
+    <input type="text" id="searchAutor" placeholder="Autor...">
+    <input type="text" id="searchCategoria" placeholder="Categoría...">
+    <button onclick="cargarLibros()">Buscar</button>
+  </div>
+
+  <!-- FORMULARIO PARA CREAR LIBRO -->
+  <div class="container">
+    <h2>➕ Agregar Nuevo Libro</h2>
+    <form id="formLibro">
+      <input type="text" id="titulo" placeholder="Título" required>
+      <input type="text" id="autor" placeholder="Autor" required>
+      <input type="text" id="categoria" placeholder="Categoría" required>
+      <input type="text" id="editorial" placeholder="Editorial" required>
+      <input type="number" id="año_publicacion" placeholder="Año Publicación" required>
+      <input type="text" id="isbn" placeholder="ISBN" required>
+      <input type="number" id="cantidad_total" placeholder="Cantidad Total" required>
+      <br>
+      <button type="submit">Guardar Libro</button>
+    </form>
+  </div>
+
+  <!-- TABLA DE LIBROS -->
+  <div class="container">
+    <h2>📋 Lista de Libros</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Título</th>
+          <th>Autor</th>
+          <th>Categoría</th>
+          <th>Editorial</th>
+          <th>Disponibles / Total</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaLibros"></tbody>
+    </table>
+  </div>
+
+  <script>
+    
+    document.addEventListener('DOMContentLoaded', cargarLibros);
+
+    async function cargarLibros() {
+      const titulo = document.getElementById('searchTitulo').value.trim();
+      const autor = document.getElementById('searchAutor').value.trim();
+      const categoria = document.getElementById('searchCategoria').value.trim();
+
+      // Usar URLSearchParams para enviar parámetros limpios
+      const params = new URLSearchParams();
+      if (titulo) params.append('titulo', titulo);
+      if (autor) params.append('autor', autor);
+      if (categoria) params.append('categoria', categoria);
+
+      const url = `/api/books?${params.toString()}`;
+
+      try {
+        const res = await fetch(url);
+        const libros = await res.json();
+
+        if (!Array.isArray(libros)) {
+          console.error('Respuesta inesperada:', libros);
+          return;
+        }
+
+        const tbody = document.getElementById('tablaLibros');
+        tbody.innerHTML = '';
+
+        libros.forEach(libro => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${libro.id}</td>
+              <td>${libro.titulo}</td>
+              <td>${libro.autor}</td>
+              <td>${libro.categoria}</td>
+              <td>${libro.editorial}</td>
+              <td>${libro.cantidad_disponible} / ${libro.cantidad_total}</td>
+              <td>${libro.activo ? '🟢 Activo' : '🔴 Inactivo'}</td>
+              <td>
+                ${libro.activo ? `<button class="btn-danger" onclick="inactivarLibro(${libro.id})">Inactivar</button>` : ''}
+              </td>
+            </tr>
+          `;
+        });
+      } catch (error) {
+        console.error('Error cargando libros:', error);
+      }
+    }
+
+    // Agregar nuevo libro
+    document.getElementById('formLibro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nuevoLibro = {
+        titulo: document.getElementById('titulo').value,
+        autor: document.getElementById('autor').value,
+        categoria: document.getElementById('categoria').value,
+        editorial: document.getElementById('editorial').value,
+        año_publicacion: parseInt(document.getElementById('año_publicacion').value),
+        isbn: document.getElementById('isbn').value,
+        cantidad_total: parseInt(document.getElementById('cantidad_total').value)
+      };
+
+      await fetch('/api/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevoLibro)
+      });
+
+      document.getElementById('formLibro').reset();
+      cargarLibros();
+    });
+
+    // Inactivar libro
+    async function inactivarLibro(id) {
+      if (confirm('¿Seguro que deseas inactivar este libro?')) {
+        await fetch(`/api/books/${id}/inactivate`, { method: 'PATCH' });
+        cargarLibros();
+      }
+    }
+  </script>
+</body>
+</html>
