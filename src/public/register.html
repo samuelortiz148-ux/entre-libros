@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Entre Libros - Registro</title>
+
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+
+<body class="auth-page">
+
+    <header class="navbar">
+        <a href="/" class="logo">Entre Libros</a>
+
+        <nav>
+            <a href="/index.html">Inicio</a>
+            <a href="/login.html">Iniciar sesión</a>
+        </nav>
+    </header>
+
+    <main class="auth-container">
+
+        <h1>Crear cuenta</h1>
+
+        <p class="auth-subtitle">
+            Regístrate para usar Entre Libros
+        </p>
+
+        <form id="register-form" class="auth-form">
+
+            <label for="nombre">
+                Nombre
+            </label>
+
+            <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                placeholder="Tu nombre"
+                required
+            >
+
+            <label for="apellido">
+                Apellido
+            </label>
+
+            <input
+                type="text"
+                id="apellido"
+                name="apellido"
+                placeholder="Tu apellido"
+                required
+            >
+
+            <label for="correo">
+                Correo electrónico
+            </label>
+
+            <input
+                type="email"
+                id="correo"
+                name="correo"
+                placeholder="correo@ejemplo.com"
+                required
+            >
+
+            <label for="contraseña">
+                Contraseña
+            </label>
+
+            <input
+                type="password"
+                id="contraseña"
+                name="contraseña"
+                placeholder="Crea una contraseña"
+                required
+            >
+
+            <button type="submit" class="auth-button">
+                Registrarse
+            </button>
+
+        </form>
+
+        <p id="auth-message" class="auth-message"></p>
+
+        <div class="auth-link">
+            ¿Ya tienes una cuenta?
+            <a href="/login.html">Inicia sesión aquí</a>
+        </div>
+
+    </main>
+<script src="/js/auth.js"></script>
+<script src="/js/session.js"></script>
+    
+</body>
+</html>
