@@ -1,3 +1,6 @@
+
+
+
 const express = require('express');
 
 const {
@@ -5,6 +8,11 @@ const {
     login,
     logout
 } = require('../controllers/auth.controller');
+
+const {
+    requireAuth,
+    requireRole
+} = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
@@ -17,4 +25,10 @@ router.post('/login', login);
 // Cierre de sesión
 router.post('/logout', logout);
 
+// Consultar el usuario de la sesión actual
+router.get('/me', requireAuth, (req, res) => {
+    return res.status(200).json({
+        usuario: req.user
+    });
+});
 module.exports = router;
