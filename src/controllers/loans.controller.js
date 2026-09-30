@@ -16,7 +16,7 @@ exports.createLoan = async (req, res) => {
         const uId = parseInt(usuario_id);
         const lId = parseInt(libro_id);
 
-        // A. Validar si el usuario tiene SANCIONES PENDIENTES (Insensible a mayúsculas/minúsculas)
+        // A. Validar si el usuario tiene SANCIONES PENDIENTES
         const { data: sanciones, error: errSanciones } = await supabase
             .from('sanciones')
             .select('*')
@@ -234,3 +234,4 @@ exports.getLoans = async (req, res) => {
     } catch (error) {
         return res.status(200).json([]);
     }
+};
