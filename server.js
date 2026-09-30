@@ -21,9 +21,6 @@ app.use(express.static(path.join(__dirname, 'src/public')));
 
 app.use('/api/books', require('./src/routes/books.routes'));
 app.use('/api/auth', require('./src/routes/auth.routes'));
-//app.use('/api/loans', require('./src/routes/loans.routes'));
-app.use('/api/auth', require('./src/routes/auth.routes'));
-app.use('/api/books', require('./src/routes/books.routes'));
 app.use('/api/loans', require('./src/routes/loans.routes'));
 app.use('/api/reports', require('./src/routes/reports.routes'));
 
