@@ -2,10 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Importar controlador de préstamos para la ruta directa de devoluciones
+const loansController = require('./src/controllers/loans.controller');
 
 // Middlewares globales
 app.use(cors());
@@ -16,12 +18,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'src/public')));
 
 // Rutas de las APIs
-//app.use('/api/auth', require('./src/routes/auth.routes'));
-//app.use('/api/books', require('./src/routes/books.routes'));
-//app.use('/api/loans', require('./src/routes/loans.routes'));
+app.use('/api/auth', require('./src/routes/auth.routes'));
+app.use('/api/books', require('./src/routes/books.routes'));
+app.use('/api/loans', require('./src/routes/loans.routes'));
 app.use('/api/reports', require('./src/routes/reports.routes'));
+
+// Endpoint directo de Devoluciones (/api/returns)
+app.post('/api/returns', loansController.returnBook);
 
 // Iniciar servidor
 app.listen(PORT, () => {
-console.log(`🚀 Servidor Entre Libros ejecutándose en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor Entre Libros ejecutándose en http://localhost:${PORT}`);
 });
