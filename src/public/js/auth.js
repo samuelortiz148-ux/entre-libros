@@ -1,4 +1,6 @@
-// =========================================
+
+
+ // =========================================
 // Autenticación - Entre Libros
 // =========================================
 
@@ -16,6 +18,27 @@ function mostrarMensaje(mensaje, tipo = '') {
     elemento.className = `auth-message ${tipo}`;
 }
 
+// Normalizar correo electrónico
+function normalizarCorreo(correo) {
+    return correo.trim().toLowerCase();
+}
+
+// Validar formato básico del correo
+function validarCorreo(correo) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
+}
+
+// Validar seguridad mínima de la contraseña
+function validarContraseña(contraseña) {
+    return (
+        typeof contraseña === 'string' &&
+        contraseña.length >= 8 &&
+        contraseña.length <= 128 &&
+        /[a-z]/.test(contraseña) &&
+        /[A-Z]/.test(contraseña) &&
+        /\d/.test(contraseña)
+    );
+}
 
 // =========================================
 // LOGIN
@@ -27,8 +50,26 @@ if (loginForm) {
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        const correo = document.getElementById('correo').value.trim();
+        const correo = normalizarCorreo(
+            document.getElementById('correo').value
+        );
         const contraseña = document.getElementById('contraseña').value;
+
+        if (!validarCorreo(correo)) {
+            mostrarMensaje(
+                'Ingresa un correo electrónico válido.',
+                'auth-error'
+            );
+            return;
+        }
+
+        if (!contraseña) {
+            mostrarMensaje(
+                'Ingresa tu contraseña.',
+                'auth-error'
+            );
+            return;
+        }
 
         mostrarMensaje('Iniciando sesión...');
 
@@ -54,7 +95,7 @@ if (loginForm) {
                 return;
             }
 
-            // Guardar los datos de la sesión en el navegador
+            // Guardar la sesión en el navegador
             sessionStorage.setItem('authToken', datos.token);
             sessionStorage.setItem(
                 'usuario',
@@ -81,7 +122,6 @@ if (loginForm) {
     });
 }
 
-
 // =========================================
 // REGISTRO
 // =========================================
@@ -94,8 +134,37 @@ if (registerForm) {
 
         const nombre = document.getElementById('nombre').value.trim();
         const apellido = document.getElementById('apellido').value.trim();
-        const correo = document.getElementById('correo').value.trim();
+        const correo = normalizarCorreo(
+            document.getElementById('correo').value
+        );
         const contraseña = document.getElementById('contraseña').value;
+
+        // Validar campos obligatorios
+        if (!nombre || !apellido || !correo || !contraseña) {
+            mostrarMensaje(
+                'Todos los campos son obligatorios.',
+                'auth-error'
+            );
+            return;
+        }
+
+        // No se exige un dominio especial como @administrador
+        if (!validarCorreo(correo)) {
+            mostrarMensaje(
+                'Ingresa un correo electrónico válido.',
+                'auth-error'
+            );
+            return;
+        }
+
+        // Rechazar contraseñas débiles antes de enviar al servidor
+        if (!validarContraseña(contraseña)) {
+            mostrarMensaje(
+                'La contraseña debe tener entre 8 y 128 caracteres, incluyendo mayúscula, minúscula y número.',
+                'auth-error'
+            );
+            return;
+        }
 
         mostrarMensaje('Registrando usuario...');
 
@@ -144,4 +213,3 @@ if (registerForm) {
         }
     });
 }
-

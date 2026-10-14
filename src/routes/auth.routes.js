@@ -1,10 +1,9 @@
 
-
-
 const express = require('express');
 
 const {
     register,
+    registerAdmin,
     login,
     logout
 } = require('../controllers/auth.controller');
@@ -16,7 +15,7 @@ const {
 
 const router = express.Router();
 
-// Registro
+// Registro público: solo crea usuarios Cliente
 router.post('/register', register);
 
 // Inicio de sesión
@@ -31,4 +30,13 @@ router.get('/me', requireAuth, (req, res) => {
         usuario: req.user
     });
 });
+
+// Crear administradores: requiere una sesión de Administrador
+router.post(
+    '/register-admin',
+    requireAuth,
+    requireRole('Administrador'),
+    registerAdmin
+);
+
 module.exports = router;
