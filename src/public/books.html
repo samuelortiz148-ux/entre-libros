@@ -7,16 +7,25 @@
     body { font-family: Arial, sans-serif; background-color: #EFE3CB; color: #1B3B6F; margin: 20px; }
     h1, h2 { color: #1B3B6F; }
     .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    input, button { padding: 8px 12px; margin: 5px 0; border-radius: 4px; border: 1px solid #ccc; }
+    input, textarea, button { padding: 8px 12px; margin: 5px 0; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; }
+    textarea { width: 97%; height: 60px; resize: vertical; }
     button { background-color: #1B3B6F; color: white; border: none; cursor: pointer; }
     button:hover { background-color: #6FA8DC; }
-    .btn-danger { background-color: #d9534f; }
+    .btn-warning { background-color: #f0ad4e; color: white; }
+    .btn-danger { background-color: #d9534f; color: white; }
+    .btn-secondary { background-color: #6c757d; color: white; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
     th { background-color: #6FA8DC; color: white; }
     tr:nth-child(even) { background-color: #f9f9f9; }
+
+    /* Modal emergente para editar stock */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: white; margin: 10% auto; padding: 20px; border-radius: 8px; width: 400px; }
+    .input-readonly { background-color: #e9ecef; cursor: not-allowed; width: 90%; }
   </style>
 </head>
+
 <body>
 
   <h1>📚 Gestión de Catálogo e Inventario de Libros</h1>
@@ -40,7 +49,9 @@
       <input type="text" id="editorial" placeholder="Editorial" required>
       <input type="number" id="año_publicacion" placeholder="Año Publicación" required>
       <input type="text" id="isbn" placeholder="ISBN" required>
-      <input type="number" id="cantidad_total" placeholder="Cantidad Total" required>
+      <input type="number" id="cantidad_total" placeholder="Cantidad Total (Max 500)" min="1" max="500" required>
+      <br>
+      <textarea id="sinopsis" placeholder="Sinopsis / Descripción del libro..." required></textarea>
       <br>
       <button type="submit">Guardar Libro</button>
     </form>
@@ -66,8 +77,27 @@
     </table>
   </div>
 
+  <!-- MODAL DE EDICIÓN DE STOCK (RESTRINGIDO) -->
+  <div id="modalEdicion" class="modal">
+    <div class="modal-content">
+      <h2>✏️ Modificar Cantidad de Ejemplares</h2>
+      <p><em>Nota: Por seguridad solo se permite modificar la cantidad total en inventario.</em></p>
+      <form id="formEditarStock">
+        <input type="hidden" id="editId">
+        
+        <label><strong>Título:</strong></label><br>
+        <input type="text" id="editTitulo" class="input-readonly" readonly disabled><br><br>
+
+        <label><strong>Cantidad Total (Stock):</strong></label><br>
+        <input type="number" id="editCantidad" min="0" max="500" style="width: 90%;" required><br><br>
+
+        <button type="submit" class="btn-warning">Actualizar Cantidad</button>
+        <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+      </form>
+    </div>
+  </div>
+
   <script>
-    
     document.addEventListener('DOMContentLoaded', cargarLibros);
 
     async function cargarLibros() {
@@ -75,7 +105,6 @@
       const autor = document.getElementById('searchAutor').value.trim();
       const categoria = document.getElementById('searchCategoria').value.trim();
 
-      // Usar URLSearchParams para enviar parámetros limpios
       const params = new URLSearchParams();
       if (titulo) params.append('titulo', titulo);
       if (autor) params.append('autor', autor);
@@ -106,6 +135,8 @@
               <td>${libro.cantidad_disponible} / ${libro.cantidad_total}</td>
               <td>${libro.activo ? '🟢 Activo' : '🔴 Inactivo'}</td>
               <td>
+                <button class="btn-warning" onclick="abrirModalEditar(${libro.id}, '${libro.titulo.replace(/'/g, "\\'")}', ${libro.cantidad_total})">Editar Stock</button>
+                <button onclick="alert('📖 SINOPSIS DE ${libro.titulo.toUpperCase()}:\\n\\n${libro.sinopsis || 'Sin descripción registrada.'}')">Detalles</button>
                 ${libro.activo ? `<button class="btn-danger" onclick="inactivarLibro(${libro.id})">Inactivar</button>` : ''}
               </td>
             </tr>
@@ -126,26 +157,33 @@
         editorial: document.getElementById('editorial').value,
         año_publicacion: parseInt(document.getElementById('año_publicacion').value),
         isbn: document.getElementById('isbn').value,
-        cantidad_total: parseInt(document.getElementById('cantidad_total').value)
+        cantidad_total: parseInt(document.getElementById('cantidad_total').value),
+        sinopsis: document.getElementById('sinopsis').value
       };
 
-      await fetch('/api/books', {
+      const res = await fetch('/api/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nuevoLibro)
       });
 
-      document.getElementById('formLibro').reset();
-      cargarLibros();
+      if (res.ok) {
+        alert('Libro registrado con éxito');
+        document.getElementById('formLibro').reset();
+        cargarLibros();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + err.error);
+      }
     });
 
-    // Inactivar libro
-    async function inactivarLibro(id) {
-      if (confirm('¿Seguro que deseas inactivar este libro?')) {
-        await fetch(`/api/books/${id}/inactivate`, { method: 'PATCH' });
-        cargarLibros();
-      }
+    // Abrir Modal de Edición de Stock
+    function abrirModalEditar(id, titulo, cantidad) {
+      document.getElementById('editId').value = id;
+      document.getElementById('editTitulo').value = titulo;
+      document.getElementById('editCantidad').value = cantidad;
+      document.getElementById('modalEdicion').style.display = 'block';
     }
-  </script>
-</body>
-</html>
+
+    function cerrarModal() {
+      document.getElementById('modalEdicion').style.display
