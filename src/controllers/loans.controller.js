@@ -4,7 +4,10 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 1. Solicitud de nuevo préstamo (Con validación de bloqueos y stock)
+// Configuración del límite máximo de préstamos activos por usuario
+const MAX_PRESTAMOS_PERMITIDOS = 3; 
+
+// 1. Solicitud de nuevo préstamo (Con validaciones de reglas de negocio)
 exports.createLoan = async (req, res) => {
     try {
         const { usuario_id, libro_id } = req.body;
@@ -16,8 +19,8 @@ exports.createLoan = async (req, res) => {
         const uId = parseInt(usuario_id);
         const lId = parseInt(libro_id);
 
-        // A. Validar si el usuario tiene SANCIONES PENDIENTES
-        const { data: sanciones, error: errSanciones } = await supabase
+        // A. Validar SANCIONES PENDIENTES
+        const { data: sanciones } = await supabase
             .from('sanciones')
             .select('*')
             .eq('usuario_id', uId);
@@ -28,17 +31,27 @@ exports.createLoan = async (req, res) => {
 
         if (sancionesPendientes.length > 0) {
             return res.status(403).json({ 
-                message: `El usuario tiene ${sancionesPendientes.length} sanción(es) pendiente(s) de pago. No puede solicitar préstamos.` 
+                message: `El usuario tiene ${sancionesPendientes.length} sanción(es) pendiente(s). No puede solicitar préstamos.` 
             });
         }
 
-        // B. Validar si el usuario tiene PRÉSTAMOS VENCIDOS no devueltos
-        const { data: prestamosActivos, error: errPrestamos } = await supabase
+        // B. Consultar PRÉSTAMOS ACTIVOS del usuario (Para límite por persona y moras)
+        const { data: prestamosActivos } = await supabase
             .from('prestamos')
             .select('*')
             .eq('usuario_id', uId)
             .eq('estado', 'PRESTADO');
 
+        const totalActivos = (prestamosActivos || []).length;
+
+        // B.1. Límite por persona: verificar cantidad máxima permitida
+        if (totalActivos >= MAX_PRESTAMOS_PERMITIDOS) {
+            return res.status(403).json({
+                message: `El usuario ya alcanzó el límite máximo de ${MAX_PRESTAMOS_PERMITIDOS} libros prestados simultáneamente.`
+            });
+        }
+
+        // B.2. Validar préstamos vencidos
         const hoy = new Date();
         const prestamoVencido = (prestamosActivos || []).find(p => {
             const fechaLimiteRaw = p.fecha_devolucion_prevista || p.fecha_limite;
@@ -51,7 +64,7 @@ exports.createLoan = async (req, res) => {
             });
         }
 
-        // C. Verificar si el libro existe y tiene stock
+        // C. Verificación de disponibilidad de stock (Libros disponibles)
         const { data: libro, error: errorLibro } = await supabase
             .from('libros')
             .select('*')
@@ -62,17 +75,16 @@ exports.createLoan = async (req, res) => {
             return res.status(404).json({ message: 'El libro solicitado no existe en la base de datos.' });
         }
 
-        const stock = libro.unidades_disponibles !== undefined ? libro.unidades_disponibles : 1;
+        const stock = libro.unidades_disponibles !== undefined ? libro.unidades_disponibles : 0;
         if (stock <= 0) {
-            return res.status(400).json({ message: 'El libro no tiene unidades disponibles para préstamo.' });
+            return res.status(400).json({ message: 'No hay ejemplares disponibles de este libro para préstamo.' });
         }
 
-        // D. Fechas de préstamo (15 días de plazo)
+        // D. Registrar préstamo (15 días de plazo)
         const fechaPrestamo = new Date();
         const fechaLimite = new Date();
         fechaLimite.setDate(fechaPrestamo.getDate() + 15);
 
-        // E. Registrar préstamo (Formateado en ISO string)
         const { data: nuevoPrestamo, error: errorPrestamo } = await supabase
             .from('prestamos')
             .insert([
@@ -88,11 +100,10 @@ exports.createLoan = async (req, res) => {
             .select();
 
         if (errorPrestamo) {
-            console.error('Error al insertar préstamo:', errorPrestamo);
             return res.status(400).json({ message: `Error Supabase: ${errorPrestamo.message}` });
         }
 
-        // F. Descontar 1 unidad del stock
+        // E. Descontar 1 unidad del stock disponible
         if (libro.unidades_disponibles !== undefined) {
             await supabase
                 .from('libros')
@@ -106,12 +117,11 @@ exports.createLoan = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error en createLoan:', error);
         return res.status(500).json({ message: error.message || 'Error interno del servidor' });
     }
 };
 
-// 2. Registro de Devoluciones (/api/returns)
+// 2. Gestión de Devoluciones (Confirmar devolución y reintegrar stock)
 exports.returnBook = async (req, res) => {
     try {
         const { prestamo_id } = req.body;
@@ -122,7 +132,7 @@ exports.returnBook = async (req, res) => {
 
         const pId = parseInt(prestamo_id);
 
-        // A. Consultar préstamo activo
+        // A. Consultar estado del préstamo
         const { data: prestamo, error: errorPrestamo } = await supabase
             .from('prestamos')
             .select('*')
@@ -139,7 +149,7 @@ exports.returnBook = async (req, res) => {
 
         const fechaDevolucion = new Date();
 
-        // B. Actualizar préstamo a DEVUELTO
+        // B. Confirmar devolución actualizando a DEVUELTO
         const { data: prestamoActualizado, error: errorUpdate } = await supabase
             .from('prestamos')
             .update({
@@ -173,10 +183,9 @@ exports.returnBook = async (req, res) => {
         if (fechaDevolucion > fechaLimite) {
             const diferenciaMs = fechaDevolucion - fechaLimite;
             const diasRetraso = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
-            const TARIFA_POR_DIA = 2000; // $2.000 COP por día
+            const TARIFA_POR_DIA = 2000;
             const montoMora = diasRetraso * TARIFA_POR_DIA;
 
-            // Insertar sanción
             const { data: sancionData } = await supabase
                 .from('sanciones')
                 .insert([
@@ -191,7 +200,7 @@ exports.returnBook = async (req, res) => {
                 .select();
 
             sancionGenerada = sancionData ? sancionData[0] : null;
-            mensajeMora = ` ¡Atención! Devolución fuera de plazo. Se generó una sanción de $${montoMora} por ${diasRetraso} día(s) de mora.`;
+            mensajeMora = ` ¡Atención! Devolución fuera de plazo. Se generó sanción de $${montoMora}.`;
         }
 
         return res.status(200).json({
@@ -201,12 +210,11 @@ exports.returnBook = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error en returnBook:', error);
         return res.status(500).json({ message: error.message || 'Error al procesar la devolución' });
     }
 };
 
-// 3. Listar préstamos (/api/loans)
+// 3. Visibilidad para Administrador (Auditoría: ver qué usuarios tienen qué libros asignados)
 exports.getLoans = async (req, res) => {
     try {
         const { data: prestamos, error } = await supabase
@@ -218,7 +226,7 @@ exports.getLoans = async (req, res) => {
             return res.status(200).json([]);
         }
 
-        const { data: usuarios } = await supabase.from('usuarios').select('id, nombre');
+        const { data: usuarios } = await supabase.from('usuarios').select('id, nombre, email');
         const { data: libros } = await supabase.from('libros').select('id, titulo');
 
         const uMap = new Map((usuarios || []).map(u => [u.id, u]));
